@@ -116,3 +116,42 @@ Follow the [Enable Remote API instructions][coreos-enabling-port-forwarding] to 
 Then you can then use the `docker` command from your local shell by setting `DOCKER_HOST`:
 
     export DOCKER_HOST=tcp://localhost:2375
+
+## Instruction
+
+1. Etcd discovery token
+
+```bash
+curl -w '\n' https://discovery.etcd.io/new
+```
+
+Generate a new Etcd service discovery token, and then update `user-data`, `etcd@discovery` section
+
+2. Start up a vagrant environment
+
+```bash
+vagrant up
+vagrant status
+```
+
+3. verify the health of cluster environment
+
+```bash
+fleetctl list-machines
+# if error occur
+ssh-add -l
+# since each vagrant up will create a renewed `insecure_private_key`
+# need to update the SSH key to access the CoreOS machines
+ssh-add ~/.vagrant.d/insecure_private_key
+# export the IP to public, so host machine could access it
+export FLEETCTL_TUNNEL=172.17.1.101
+# to verify its existance
+env | grep FLEETCTL_TUNNEL
+fleetctl list-machines
+```
+
+4. start your services
+
+```bash
+
+```
