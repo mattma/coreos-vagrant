@@ -1,0 +1,18 @@
+[Unit]
+Description=setup a testing dillinger service
+Requires=docker.service
+After=docker.service
+
+[Service]
+EnvironmentFile=/etc/environment
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker kill myapp-%i
+ExecStartPre=-/usr/bin/docker rm myapp-%i
+ExecStartPre=/usr/bin/docker pull dscape/dillinger
+ExecStartPre=/usr/bin/etcdctl set /test/myapp-%i ${COREOS_PRIVATE_IPV4}:%i
+ExecStart=/usr/bin/docker run -p ${COREOS_PRIVATE_IPV4}:%i:8080 --name myapp-%i dscape/dillinger
+ExecStop=/usr/bin/docker stop myapp-%i
+ExecStop=/usr/bin/etcdctl rm /test/myapp-%i
+
+[X-Fleet]
+Conflicts=myapp@*.service

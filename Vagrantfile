@@ -1,35 +1,46 @@
 # -*- mode: ruby -*-
-# # vi: set ft=ruby :
+# vi: set ft=ruby :
 
 require 'fileutils'
 
-Vagrant.require_version ">= 1.6.0"
+$update_channel = "beta"
+$num_instances = 5
 
-CLOUD_CONFIG_PATH = File.join(File.dirname(__FILE__), "user-data")
-CONFIG = File.join(File.dirname(__FILE__), "config.rb")
+# Change basename of the VM.  "matt-01" through to "matt-${num_instances}".
+$instance_name_prefix = "matt"
 
-# Defaults for config options defined in CONFIG
-$num_instances = 1
-$instance_name_prefix = "core"
-$update_channel = "alpha"
-$enable_serial_logging = false
+# Enable NFS sharing of your home directory ($HOME) to CoreOS
+# It will be mounted at the same path in the VM as on the host.
+# Example: /Users/foobar -> /Users/foobar
 $share_home = false
-$vm_gui = false
-$vm_memory = 1024
-$vm_cpus = 1
+
+# $shared_folders = {'source/' => '/home/core/source/'}
 $shared_folders = {}
+
+# Enable port forwarding from guest(s) to host machine, syntax is: { 80 => 8080 }, auto correction is enabled by default.
 $forwarded_ports = {}
 
-# Attempt to apply the deprecated environment variable NUM_INSTANCES to
-# $num_instances while allowing config.rb to override it
-if ENV["NUM_INSTANCES"].to_i > 0 && ENV["NUM_INSTANCES"]
-  $num_instances = ENV["NUM_INSTANCES"].to_i
-end
+# Customize VMs
+$vm_gui = false
+$vm_memory = 2048
+$vm_cpus = 1
 
-if File.exist?(CONFIG)
-  require CONFIG
-end
+# Enable port forwarding of Docker TCP socket
+# $expose_docker_tcp=2375
 
+# Log the serial consoles of CoreOS VMs to log/
+$enable_serial_logging = false
+
+VAGRANTFILE_API_VERSION = "2"
+CLOUD_CONFIG_PATH = File.join(File.dirname(__FILE__), "user-data")
+
+box = "coreos-%s" % $update_channel
+box_version = ">= 557.2.0"
+box_url = "http://%s.release.core-os.net/amd64-usr/current/coreos_production_vagrant.json" % $update_channel
+
+shared_path = "shared/"
+
+# Set variable value: vm_gui, vm_memory, vm_cpus
 # Use old vb_xxx config variables when set
 def vm_gui
   $vb_gui.nil? ? $vm_gui : $vb_gui
@@ -43,30 +54,20 @@ def vm_cpus
   $vb_cpus.nil? ? $vm_cpus : $vb_cpus
 end
 
-Vagrant.configure("2") do |config|
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # always use Vagrants insecure key
   config.ssh.insert_key = false
 
-  config.vm.box = "coreos-%s" % $update_channel
-  config.vm.box_version = ">= 308.0.1"
-  config.vm.box_url = "http://%s.release.core-os.net/amd64-usr/current/coreos_production_vagrant.json" % $update_channel
-
-  ["vmware_fusion", "vmware_workstation"].each do |vmware|
-    config.vm.provider vmware do |v, override|
-      override.vm.box_url = "http://%s.release.core-os.net/amd64-usr/current/coreos_production_vagrant_vmware_fusion.json" % $update_channel
-    end
-  end
+  # Every Vagrant virtual environment requires a box to build off of.
+  config.vm.box = box
+  config.vm.box_version = box_version
+  config.vm.box_url = box_url
 
   config.vm.provider :virtualbox do |v|
     # On VirtualBox, we don't have guest additions or a functional vboxsf
     # in CoreOS, so tell Vagrant that so it can be smarter.
     v.check_guest_additions = false
     v.functional_vboxsf     = false
-  end
-
-  # plugin conflict
-  if Vagrant.has_plugin?("vagrant-vbguest") then
-    config.vbguest.auto_update = false
   end
 
   (1..$num_instances).each do |i|
@@ -80,15 +81,6 @@ Vagrant.configure("2") do |config|
         serialFile = File.join(logdir, "%s-serial.txt" % vm_name)
         FileUtils.touch(serialFile)
 
-        ["vmware_fusion", "vmware_workstation"].each do |vmware|
-          config.vm.provider vmware do |v, override|
-            v.vmx["serial0.present"] = "TRUE"
-            v.vmx["serial0.fileType"] = "file"
-            v.vmx["serial0.fileName"] = serialFile
-            v.vmx["serial0.tryNoRxLoss"] = "FALSE"
-          end
-        end
-
         config.vm.provider :virtualbox do |vb, override|
           vb.customize ["modifyvm", :id, "--uart1", "0x3F8", "4"]
           vb.customize ["modifyvm", :id, "--uartmode1", serialFile]
@@ -99,16 +91,11 @@ Vagrant.configure("2") do |config|
         config.vm.network "forwarded_port", guest: 2375, host: ($expose_docker_tcp + i - 1), auto_correct: true
       end
 
+      # Create a forwarded port mapping which allows access to a specific port
+      # within the machine from a port on the host machine.
+      # ex: config.vm.network "forwarded_port", guest: 49156, host: 9876
       $forwarded_ports.each do |guest, host|
-	config.vm.network "forwarded_port", guest: guest, host: host, auto_correct: true
-      end
-
-      ["vmware_fusion", "vmware_workstation"].each do |vmware|
-        config.vm.provider vmware do |v|
-          v.gui = vm_gui
-          v.vmx['memsize'] = vm_memory
-          v.vmx['numvcpus'] = vm_cpus
-        end
+        config.vm.network "forwarded_port", guest: guest, host: host, auto_correct: true
       end
 
       config.vm.provider :virtualbox do |vb|
@@ -117,11 +104,11 @@ Vagrant.configure("2") do |config|
         vb.cpus = vm_cpus
       end
 
-      ip = "172.17.8.#{i+100}"
+      # Create a private network, which allows host-only access to the machine using a specific IP.
+      ip = "172.17.1.#{i+100}"
       config.vm.network :private_network, ip: ip
 
-      # Uncomment below to enable NFS for sharing the host machine into the coreos-vagrant VM.
-      #config.vm.synced_folder ".", "/home/core/share", id: "core", :nfs => true, :mount_options => ['nolock,vers=3,udp']
+      # Share an additional folder to the guest VM.
       $shared_folders.each_with_index do |(host_folder, guest_folder), index|
         config.vm.synced_folder host_folder.to_s, guest_folder.to_s, id: "core-share%02d" % index, nfs: true, mount_options: ['nolock,vers=3,udp']
       end
