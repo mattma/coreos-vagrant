@@ -18,7 +18,7 @@ $share_home = false
 $shared_folders = {}
 
 # Enable port forwarding from guest(s) to host machine, syntax is: { 80 => 8080 }, auto correction is enabled by default.
-$forwarded_ports = {3001 => 4401, 3002 => 4402, 3003 => 4403}
+$forwarded_ports = {}
 
 # Customize VMs
 $vm_gui = false

@@ -3,11 +3,12 @@
 coreos:
   etcd:
     # curl -w '\n' https://discovery.etcd.io/new
-    discovery: https://discovery.etcd.io/e9c4c98eb1ac5e24e3db80d8fb3b1086
+    discovery: https://discovery.etcd.io/a0a2150a8f21c7af7feb01a0c85a3057
     addr: $public_ipv4:4001
     peer-addr: $public_ipv4:7001
   fleet:
     public-ip: $public_ipv4
+    metadata: "role=kubernetes"
   flannel:
     interface: $public_ipv4
   units:
@@ -29,3 +30,7 @@ coreos:
 
         [Install]
         WantedBy=sockets.target
+
+  update:
+    group: alpha
+    reboot-strategy: etcd-lock
