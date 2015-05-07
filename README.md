@@ -153,5 +153,17 @@ fleetctl list-machines
 4. start your services
 
 ```bash
+fleetctl submit services/static/*
+fleetctl start confd.service confdata.service nginx.service
+```
 
+```bash
+# submit application instances
+ln -s services/templates/myapp@.service services/instances/myapp@8891.service
+ln -s services/templates/myapp@.service services/instances/myapp@8892.service
+ln -s services/templates/myapp@.service services/instances/myapp@8893.service
+ln -s services/templates/myapp@.service services/instances/myapp@8894.service
+
+fleetctl start services/instances/*
+fleetctl list-units
 ```

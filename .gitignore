@@ -4,3 +4,4 @@ log/
 
 # will be the syslink from services/templates
 services/instances/
+shared/

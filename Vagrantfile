@@ -3,8 +3,8 @@
 
 require 'fileutils'
 
-$update_channel = "beta"
-$num_instances = 5
+$update_channel = "alpha"
+$num_instances =  3
 
 # Change basename of the VM.  "matt-01" through to "matt-${num_instances}".
 $instance_name_prefix = "matt"
@@ -15,15 +15,17 @@ $instance_name_prefix = "matt"
 $share_home = false
 
 # $shared_folders = {'source/' => '/home/core/source/'}
-$shared_folders = {}
+$shared_folders = {'shared/' => '/home/core/shared/'}
 
 # Enable port forwarding from guest(s) to host machine, syntax is: { 80 => 8080 }, auto correction is enabled by default.
-$forwarded_ports = {}
+$forwarded_ports = {3001 => 4401, 3002 => 4402, 3003 => 4403}
 
 # Customize VMs
 $vm_gui = false
-$vm_memory = 2048
+$vm_memory = 1024
 $vm_cpus = 1
+
+$BASE_IP_ADDR = "172.17.8"
 
 # Enable port forwarding of Docker TCP socket
 # $expose_docker_tcp=2375
@@ -35,7 +37,7 @@ VAGRANTFILE_API_VERSION = "2"
 CLOUD_CONFIG_PATH = File.join(File.dirname(__FILE__), "user-data")
 
 box = "coreos-%s" % $update_channel
-box_version = ">= 557.2.0"
+box_version = ">= 668.2.0"
 box_url = "http://%s.release.core-os.net/amd64-usr/current/coreos_production_vagrant.json" % $update_channel
 
 shared_path = "shared/"
@@ -105,7 +107,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       end
 
       # Create a private network, which allows host-only access to the machine using a specific IP.
-      ip = "172.17.18.#{i+100}"
+      # ip = "172.17.8.#{i+100}"
+      ip = "#{BASE_IP_ADDR}.#{i+100}"
       config.vm.network :private_network, ip: ip
 
       # Share an additional folder to the guest VM.
