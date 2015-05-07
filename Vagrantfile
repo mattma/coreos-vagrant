@@ -14,8 +14,8 @@ $instance_name_prefix = "matt"
 # Example: /Users/foobar -> /Users/foobar
 $share_home = false
 
-# $shared_folders = {'source/' => '/home/core/source/'}
-$shared_folders = {'shared/' => '/home/core/shared/'}
+# $shared_folders = {'shared/' => '/home/core/shared/'}
+$shared_folders = {}
 
 # Enable port forwarding from guest(s) to host machine, syntax is: { 80 => 8080 }, auto correction is enabled by default.
 $forwarded_ports = {3001 => 4401, 3002 => 4402, 3003 => 4403}
@@ -25,7 +25,7 @@ $vm_gui = false
 $vm_memory = 1024
 $vm_cpus = 1
 
-$BASE_IP_ADDR = "172.17.8"
+BASE_IP_ADDR = "172.17.8"
 
 # Enable port forwarding of Docker TCP socket
 # $expose_docker_tcp=2375
