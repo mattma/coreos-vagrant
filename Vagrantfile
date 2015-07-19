@@ -4,10 +4,11 @@
 require 'fileutils'
 
 $update_channel = "alpha"
-$num_instances =  3
+$image_version = "current"
+$num_instances = 1
 
 # Change basename of the VM.  "matt-01" through to "matt-${num_instances}".
-$instance_name_prefix = "matt"
+$instance_name_prefix = "ts"
 
 # Enable NFS sharing of your home directory ($HOME) to CoreOS
 # It will be mounted at the same path in the VM as on the host.
@@ -36,10 +37,6 @@ $enable_serial_logging = false
 VAGRANTFILE_API_VERSION = "2"
 CLOUD_CONFIG_PATH = File.join(File.dirname(__FILE__), "user-data")
 
-box = "coreos-%s" % $update_channel
-box_version = ">= 668.2.0"
-box_url = "http://%s.release.core-os.net/amd64-usr/current/coreos_production_vagrant.json" % $update_channel
-
 shared_path = "shared/"
 
 # Set variable value: vm_gui, vm_memory, vm_cpus
@@ -61,15 +58,22 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.ssh.insert_key = false
 
   # Every Vagrant virtual environment requires a box to build off of.
-  config.vm.box = box
-  config.vm.box_version = box_version
-  config.vm.box_url = box_url
+  config.vm.box = "coreos-%s" % $update_channel
+  if $image_version != "current"
+    config.vm.box_version = $image_version
+  end
+  config.vm.box_url = "http://%s.release.core-os.net/amd64-usr/%s/coreos_production_vagrant.json" % [$update_channel, $image_version]
 
   config.vm.provider :virtualbox do |v|
     # On VirtualBox, we don't have guest additions or a functional vboxsf
     # in CoreOS, so tell Vagrant that so it can be smarter.
     v.check_guest_additions = false
     v.functional_vboxsf     = false
+  end
+
+  # plugin conflict
+  if Vagrant.has_plugin?("vagrant-vbguest") then
+    config.vbguest.auto_update = false
   end
 
   (1..$num_instances).each do |i|
